@@ -1,0 +1,900 @@
+  <!doctype html>
+  <html lang="en">
+      <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Zork AI</title>
+          <link
+              href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+              rel="stylesheet"
+          />
+          <link
+              href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap"
+              rel="stylesheet"
+          />
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+
+          <style>
+              /* General Styles */
+              body {
+                  background-color: #121212;
+                  color: #e0e0e0;
+                  font-family: "Roboto Mono", monospace;
+              }
+
+              .chat-container {
+                  display: flex;
+                  height: 100vh;
+                  color: #e0e0e0;
+                  /* flex-wrap: wrap; */
+              }
+
+              /* Chat History Styles */
+              .chat-history {
+                    width: 300px;
+                    max-width: 300px;
+                    min-width: 300px;
+                    background-color: #1f1f1f;
+                    border-right: 1px solid #444;
+                    overflow: hidden;
+                    position: relative;
+                    padding: 10px;
+                    transition: width 0.3s ease, all 0.5s ease-in-out;
+                    /* For custom scrollbar */
+                    overflow-y: auto; /* Enable scrolling */
+                 }
+
+              /* Scrollbar Styles for chatHistory */
+                .chat-history::-webkit-scrollbar {
+                   width: 8px; /* Set the width of the scrollbar */
+                }
+
+                .chat-history::-webkit-scrollbar-track {
+                   background: #333; /* Track color */
+                   border-radius: 10px;
+                }
+
+                .chat-history::-webkit-scrollbar-thumb {
+                   background: #555; /* Thumb color */
+                   border-radius: 10px;
+                }
+
+                .chat-history::-webkit-scrollbar-thumb:hover {
+                   background: #888; /* Hover color for the thumb */
+                }
+
+                .chat-history::-webkit-scrollbar-thumb:active {
+                   background: #444; /* Active color for the thumb */
+                }
+
+              .chat-history.collapsed {
+                  width: 80px;
+                  min-width: 80px;
+              }
+
+              .chat-history.collapsed .list-group-item,
+              .chat-history.collapsed .chat-history-header h5,
+              .chat-history.collapsed .chat-history-header .new-chat-btn {
+                  display: none;
+              }
+
+              .chat-history.collapsed .new-chat-btn-right {
+                  display: block;
+              }
+
+              .chat-history.collapsed .circle-btn.show {
+                  display: flex;
+              }
+
+              .chat-history-header {
+                  display: flex;
+                  align-items: center;
+                  padding: 10px;
+                  justify-content: flex-start;
+                  gap: 10px;
+              }
+
+              .chat-history-header h5 {
+                  margin: 0;
+              }
+
+              #toggleHistory {
+                  order: -1;
+              }
+
+              /* Circle Button Styles */
+              .chat-history .circle-btn {
+                  position: absolute;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  bottom: 20px;
+                  width: 50px;
+                  height: 50px;
+                  background-color: #28a745;
+                  color: white;
+                  border-radius: 50%;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  font-size: 24px;
+                  cursor: pointer;
+                  z-index: 10;
+                  display: none;
+              }
+
+              /* New Chat Button */
+              .new-chat-btn-right {
+                  position: absolute;
+                  bottom: 20px;
+                  right: -120px;
+                  z-index: 10;
+                  display: none;
+              }
+
+              .chat-history .new-chat-btn {
+                  position: absolute;
+                  bottom: 20px;
+                  left: 50%;
+                  transform: translateX(-50%);
+              }
+
+              /* Chat Box Styles */
+              .chat-box {
+                  flex-grow: 1;
+                  display: flex;
+                  flex-direction: column;
+                  background-color: #121212;
+                  /* max-width: calc(100% - 300px); */
+              }
+
+              .chat-area {
+                  flex-grow: 1;
+                      padding: 20px;
+                      overflow-y: auto;
+                      background-color: #121212;
+                      color: #e0e0e0;
+                      display: flex;
+                      flex-direction: column;
+                      justify-content: center;  /* Center content vertically */
+                      align-items: center;      /* Center content horizontally */
+                      text-align: center;
+              }
+
+              /* Chat Input Styles */
+              .chat-input-area {
+                  /* border-top: 1px solid #444; */
+                  padding: 10px;
+                  /* background-color: #1f1f1f; */
+              }
+
+              .chat-input-area .input-group {
+                  justify-content: center;
+              }
+
+              .chat-input-area .form-control {
+                  max-width: 400px;
+                  white-space: pre-wrap;
+              }
+
+              #userInput {
+                  background-color: #2b2b2b;
+                  color: #e0e0e0;
+                  border: 1px solid #444;
+                  border-radius: 8px;
+                  padding: 12px;
+                  font-size: 16px;
+                  font-family: "Arial", sans-serif;
+                  resize: none;
+                  box-sizing: border-box;
+                  transition: all 0.3s ease;
+                  width: 100%;
+                  max-width: 650px;
+                  height: 60px;
+              }
+
+              #userInput::placeholder {
+                  color: #888;
+              }
+
+              #userInput:focus {
+                  outline: none;
+                  border-color: #28a745;
+                  box-shadow: 0 0 5px rgba(40, 167, 69, 0.6);
+              }
+
+              /* Custom Scrollbar for User Input */
+              #userInput::-webkit-scrollbar {
+                  width: 8px;
+              }
+
+              #userInput::-webkit-scrollbar-track {
+                  background: #2b2b2b;
+                  border-radius: 8px;
+              }
+
+              #userInput::-webkit-scrollbar-thumb {
+                  background-color: #444;
+                  border-radius: 8px;
+                  transition: background-color 0.3s ease;
+              }
+
+              #userInput::-webkit-scrollbar-thumb:hover {
+                  background-color: #28a745;
+              }
+
+              /* Send Button */
+              .send-btn {
+                  background-color: #28a745;
+                  border-color: #28a745;
+                  color: #fff;
+                  border-radius: 8px;
+                  padding: 10px 20px;
+                  margin-left: 10px;
+                  transition: background-color 0.3s ease;
+                  width: 100px;
+              }
+
+              .send-btn:hover {
+                  background-color: #218838;
+                  border-color: #1e7e34;
+              }
+
+              /* User and AI Message Styles */
+              .user-message,
+              .ai-message {
+                  border-radius: 10px;
+                  padding: 10px;
+                  width: fit-content;
+                  max-width: 70%;
+                  margin-bottom: 10px;
+                  word-wrap: break-word;
+                  font-size: 14px;
+              }
+
+              .user-message {
+                  background-color: #007bff;
+                  color: #fff;
+                  margin-left: auto;
+                  text-align: right;
+                  /* max-width: 70%; */
+              }
+
+              .ai-message {
+                  /* background-color: #28a745; */
+                  /* background-color: #282828;
+                  color: #fff;
+                  text-align: left; */
+                  /* max-width: 70%; */
+                  background-color: #444;
+                      color: white;
+                      align-self: flex-start;
+              }
+
+              /* Button Styles for Collapsed Sidebar */
+              .chat-history.collapsed .chat-history-header #toggleHistory {
+                  position: absolute;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  top: 10px;
+              }
+
+              /* Sidebar Button Display */
+              .chat-history.collapsed .chat-history-header #toggleHistory {
+                  /* margin-left: 0; */
+                  position: absolute;
+                      left: 50%;
+                      transform: translateX(-50%);
+                      top: 10px;
+              }
+
+              .chat-history .list-group-item {
+                  cursor: pointer;
+                  background-color: #1f1f1f;
+                  color: #e0e0e0;
+              }
+
+              .chat-history .list-group-item:hover {
+                  background-color: #333;
+              }
+
+              .btn-primary {
+                  background: linear-gradient(135deg, #007bff, #0056b3);
+                  border: none;
+              }
+
+              .btn:hover {
+                  box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
+              }
+
+              /* Disabled State Styles */
+              #userInput:disabled,
+              #sendBtn:disabled {
+                  background-color: #333;
+                  color: #666;
+                  cursor: not-allowed;
+                  opacity: 0.6;
+              }
+
+              /* Welcome Message Styles */
+              .welcome-message {
+                  background-color: #1f1f1f;
+                      padding: 20px;
+                      border-radius: 8px;
+                      width: 80%;
+                      max-width: 500px;
+                      text-align: center;
+              }
+
+              .hidden {
+                  display: none;
+              }
+
+              /* Chat History Loading Spinner */
+              #loadingSpinner {
+                  margin: 50px;
+                  background-color: #121212;
+                  color: #e0e0e0;
+                  justify-content: center;
+                  align-items: center;
+              }
+
+              /* Animation for Messages */
+              .user-message,
+              .ai-message {
+                  animation: fadeIn 0.5s ease-in-out;
+              }
+
+              @keyframes fadeIn {
+                  from {
+                      opacity: 0;
+                      transform: translateY(10px);
+                  }
+                  to {
+                      opacity: 1;
+                      transform: translateY(0);
+                  }
+              }
+              #chatHistoryArea {
+                  padding: 20px;
+                      background-color: #121212;
+                      color: #e0e0e0;
+                      justify-content: center;
+                      align-items: center;
+                      overflow-y: auto;
+                      /* max-height: 70vh; /* Prevent it from growing too large */ */
+              }
+
+
+              /* Logout Button Styles */
+              .logout-btn {
+                  /* position: absolute; */
+                  position: fixed;
+                  top: 20px;
+                  right: 50px;
+                  background-color: #d9534f;
+                  color: white;
+                  border: none;
+                  padding: 10px 20px;
+                  border-radius: 5px;
+                  font-size: 16px;
+                  cursor: pointer;
+                  transition: background-color 0.3s;
+                  z-index: 100;
+                  text-decoration: none;
+              }
+
+              .logout-btn:hover {
+                  background-color: #c9302c;
+              }
+
+              /* Style for the code block container */
+              code {
+                white-space: pre-wrap; /* Allow wrapping of code lines */
+              }
+
+              /* Style for the <pre> tag to make it a scrollable box */
+              pre {
+                background-color: #0d0d0d ; /* Light background for code */
+                /* background-color: #f5f5f5; /* Light background for code */ */
+                border: 1px solid #ccc; /* Border around the code block */
+                border-radius: 5px; /* Rounded corners */
+                padding: 10px; /* Padding inside the box */
+                margin: 10px 0; /* Margin outside the box */
+                overflow-x: auto; /* Enable horizontal scrolling */
+                max-width: 100%; /* Make sure the code block doesn’t overflow */
+                position: relative; /* For positioning copy button inside the block */
+              }
+
+              /* Add a custom copy button inside the code block */
+              .copy-button {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background-color: #007bff;
+                color: white;
+                padding: 5px 10px;
+                font-size: 12px;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+              }
+
+              /* Change button color when hovered */
+              .copy-button:hover {
+                background-color: #0056b3;
+              }
+
+              /* Media Queries for Smaller Screens */
+              @media (max-width: 768px) {
+                  .chat-container {
+                      flex-direction: column; /* Stack elements vertically on small screens */
+                  }
+
+                  .chat-history {
+                      width: 100%;
+                      min-width: 0; /* Allow sidebar to take full width */
+                      border-right: none; /* Remove border on smaller screens */
+                  }
+
+                  .chat-box {
+                      max-width: 100%; /* Allow chat box to take full width on small screens */
+                  }
+
+                  /* Adjust message max width */
+                  .user-message, .ai-message {
+                      max-width: 90%; /* Allow for more space for messages on mobile */
+                  }
+              }
+
+              /* For Very Small Screens (Mobile Portrait) */
+              @media (max-width: 480px) {
+                  .chat-history.collapsed .chat-history-header {
+                      flex-direction: column; /* Stack items vertically */
+                  }
+
+                  .send-btn {
+                      background-color: #28a745;
+                          border-color: #28a745;
+                          color: #fff;
+                          border-radius: 8px;
+                          padding: 10px 20px;
+                          margin-left: 10px;
+                          transition: background-color 0.3s ease;
+                          width: 100px;
+                  }
+
+          </style>
+      </head>
+      <body>
+          <div class="container-fluid chat-container">
+              <!-- Left Sidebar (Chat History) -->
+              <div class="chat-history collapsed" id="chatHistory">
+                  <div class="chat-history-header">
+                      <button class="btn btn-outline-light" id="toggleHistory">
+                          ☰
+                      </button>
+                      <h5>Chat History</h5>
+                      <button
+                          class="btn btn-outline-success new-chat-btn"
+                          id="newChatBtn"
+                      >
+                          New Chat
+                      </button>
+                  </div>
+
+                  <ul class="chatHistoryList list-group list-group-flush mt-3"  id="chatList">
+                      <!-- <li class="list-group-item">Chat 1</li>
+                      <li class="list-group-item">Chat 2</li>
+                      <li class="list-group-item">Chat 3</li> -->
+                  </ul>
+
+                  <!-- Circle Button with "+" sign -->
+                  <div class="circle-btn" id="circleBtn">+</div>
+              </div>
+
+              <!-- New Chat button for collapsed sidebar (Outside the sidebar) -->
+              <button
+                  class="btn btn-outline-success mt-2 new-chat-btn-right"
+                  id="newChatBtnRight"
+              >
+                  New Chat
+              </button>
+
+              <!-- Main Chat Area -->
+              <div class="chat-box">
+                  <!-- Welcome Message -->
+                  <div class="chat-area">
+                      <div id="welcomeMessage" class="welcome-message">
+                          <h5>Welcome to Zork!</h5>
+                          <p>
+                              Start a conversation or select from the history on
+                              the left.
+                          </p>
+                      </div>
+                  </div>
+                  <div id="chatHistoryArea">
+                      <!-- Chat history messages will be displayed here -->
+                  </div>
+
+                  <div
+                      class="spinner-border text-light"
+                      id="loadingSpinner"
+                      style="display: none"
+                      role="status"
+                  >
+                      <span class="visually-hidden">Loading...</span>
+                  </div>
+
+                  <!-- Chat Input Area -->
+                  <div class="chat-input-area">
+                      <div class="input-group">
+                          <textarea
+                              class="form-control"
+                              id="userInput"
+                              placeholder="Type your message..."
+                              rows="2"
+                          ></textarea>
+                          <button class="btn btn-primary send-btn" id="sendBtn">
+                              Send
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Logout Button -->
+          <a class="logout-btn" id="logoutBtn" href="/logout">Logout</a>
+
+          <!-- JavaScript -->
+          <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+          <!-- <script src="https://cdn.jsdelivr.net/npm/marked@5.1.0/lib/marked.min.js"></script> -->
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.0.2/marked.min.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+
+          <script>
+            // Utility function to clear chat area and input
+            function clearChat() {
+              const chatHistoryArea = document.getElementById("chatHistoryArea");
+              const userInput = document.getElementById("userInput");
+              chatHistoryArea.innerHTML = "";
+              userInput.value = "";
+            }
+
+            // Function to toggle sidebar collapse and button visibility
+            function toggleSidebar() {
+              const chatHistory = document.getElementById("chatHistory");
+              const newChatBtnRight = document.getElementById("newChatBtnRight");
+              const circleBtn = document.getElementById("circleBtn");
+
+              chatHistory.classList.toggle("collapsed");
+              newChatBtnRight.classList.toggle("d-none"); // Show/hide right button
+              circleBtn.classList.toggle("show"); // Show/hide circle button
+
+              // Ensure the "+" button only shows when the sidebar is collapsed
+              circleBtn.style.display = chatHistory.classList.contains("collapsed") ? "flex" : "none";
+
+              // Save the sidebar state to localStorage
+              localStorage.setItem("sidebarCollapsed", chatHistory.classList.contains("collapsed"));
+            }
+
+            // Function to restore the sidebar state on page load
+            function restoreSidebarState() {
+              const chatHistory = document.getElementById("chatHistory");
+              const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+
+              if (isCollapsed) {
+                chatHistory.classList.add("collapsed");
+                document.getElementById("newChatBtnRight").classList.remove("d-none");
+                document.getElementById("circleBtn").style.display = "flex";
+              } else {
+                chatHistory.classList.remove("collapsed");
+                document.getElementById("newChatBtnRight").classList.add("d-none");
+                document.getElementById("circleBtn").style.display = "none";
+              }
+            }
+
+            // Function to load chat history dynamically
+            // Load and display the chat history in the sidebar
+            // Function to load chat history dynamically
+            // Function to load chat history dynamically
+            document.addEventListener("DOMContentLoaded", function () {
+              // Load chat history when the page loads
+              loadChatHistory();
+
+              // Fetch and display the user's chat history
+              async function loadChatHistory() {
+                try {
+                  const response = await fetch("/chat-history");
+                  const data = await response.json();
+
+                  const chatHistoryArea = document.getElementById("chatHistoryArea");
+                  chatHistoryArea.innerHTML = ""; // Clear the area before adding new messages
+
+                  if (data.history && data.history.length > 0) {
+                    // Iterate over the history and display messages
+                    data.history.forEach((entry) => {
+                      const messageDiv = document.createElement("div");
+
+                      // Apply appropriate class based on the role (user or ai)
+                      if (entry.role === "user") {
+                        messageDiv.classList.add("user-message");
+                        messageDiv.textContent = entry.message; // Display user message as plain text
+                      } else if (entry.role === "ai") {
+                        messageDiv.classList.add("ai-message");
+
+                        // Render markdown (with syntax highlighting for AI message)
+                        messageDiv.innerHTML = marked(entry.message);
+
+                        // Apply syntax highlighting
+                        hljs.highlightAll();
+
+                        // Add "Copy" button to each code block
+                        const codeBlocks = messageDiv.querySelectorAll('pre');
+                        codeBlocks.forEach(block => {
+                          const copyButton = document.createElement('button');
+                          copyButton.classList.add('copy-button');
+                          copyButton.textContent = 'Copy';
+
+                          // Position the button inside the code block
+                          block.style.position = 'relative';
+                          block.appendChild(copyButton);
+
+                          // Add event listener for copying the code to clipboard
+                          copyButton.addEventListener('click', () => {
+                            const code = block.querySelector('code').textContent; // Get the code inside the block
+                            navigator.clipboard.writeText(code).then(() => {
+                              copyButton.textContent = 'Copied!';
+                              setTimeout(() => {
+                                copyButton.textContent = 'Copy'; // Reset button text after a moment
+                              }, 1500);
+                            });
+                          });
+                        });
+                      }
+
+                      // Add the message to the chat history area
+                      chatHistoryArea.appendChild(messageDiv);
+                    });
+                  } else {
+                    // If no chat history, show a default message
+                    const noHistoryMessage = document.createElement("div");
+                    noHistoryMessage.textContent = "No chat history available.";
+                    chatHistoryArea.appendChild(noHistoryMessage);
+                  }
+                } catch (error) {
+                  console.error("Error loading chat history:", error);
+                  // Optionally show an error message in the chat area
+                  const errorMessage = document.createElement("div");
+                  errorMessage.textContent = "Error loading chat history.";
+                  chatHistoryArea.appendChild(errorMessage);
+                }
+              }
+            });
+
+
+            // Function to load content for a specific past chat
+            function loadChatContent(index) {
+              // Get the message from the history (for demonstration, use index)
+              const selectedMessage = data.history[index]; // You can store the 'data' array globally
+
+              // Display the selected message in the chat history area
+              const chatHistoryArea = document.getElementById("chatHistoryArea");
+              const messageDiv = document.createElement("div");
+              messageDiv.classList.add(selectedMessage.role === "user" ? "user-message" : "ai-message");
+              messageDiv.textContent = selectedMessage.message;
+
+              chatHistoryArea.appendChild(messageDiv);
+              chatHistoryArea.scrollTop = chatHistoryArea.scrollHeight;
+            }
+
+
+            // Event listeners for various buttons and actions
+            document.addEventListener("DOMContentLoaded", function () {
+              // Restore sidebar state on page load
+              restoreSidebarState();
+
+              // Toggle chat history visibility
+              document.getElementById("toggleHistory").addEventListener("click", toggleSidebar);
+
+              // New Chat button functionality
+              // Trigger a new chat session when the "New Chat" button is clicked
+              document.getElementById("newChatBtn").addEventListener("click", async function () {
+                // Clear current chat history (UI)
+                clearChat();
+
+                try {
+                  // Make a request to the backend to clear the chat history
+                  const response = await fetch('/new-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                  });
+
+                  const data = await response.json();
+                  if (data.message === "New chat started!") {
+                    displayWelcomeMessage();
+                  } else {
+                    alert("Error starting new chat");
+                  }
+                } catch (error) {
+                  console.error("Error starting new chat:", error);
+                }
+              });
+
+
+              // Circle button functionality to reset chat and toggle sidebar
+              document.getElementById("circleBtn").addEventListener("click", function () {
+                clearChat();
+                const chatHistory = document.getElementById("chatHistory");
+                if (!chatHistory.classList.contains("collapsed")) {
+                  chatHistory.classList.add("collapsed");
+                }
+                displayWelcomeMessage();
+              });
+
+              // Initialize chat history load
+              loadChatHistory();
+            });
+
+            // Function to display the welcome message and reset chat
+            function displayWelcomeMessage() {
+              const welcomeMessage = document.getElementById("welcomeMessage");
+              welcomeMessage.classList.remove("hidden");
+              clearChat();
+            }
+
+            // Send message function
+            async function sendMessage() {
+              const userInput = document.getElementById("userInput").value.trim();
+              const loadingSpinner = document.getElementById("loadingSpinner");
+              const userInputField = document.getElementById("userInput");
+              const sendButton = document.getElementById("sendBtn");
+              const welcomeMessage = document.getElementById("welcomeMessage");
+
+              if (userInput !== "") {
+                const chatHistoryArea = document.getElementById("chatHistoryArea");
+
+                // Hide the welcome message when user starts
+                if (welcomeMessage) {
+                  welcomeMessage.classList.add("hidden");
+                }
+
+                // Display user message
+                const userMessage = document.createElement("div");
+                userMessage.classList.add("user-message");
+                userMessage.textContent = userInput;
+                chatHistoryArea.appendChild(userMessage);
+
+                // Clear input field and disable controls
+                userInputField.value = "";
+                userInputField.disabled = true;
+                sendButton.disabled = true;
+
+                // Show loading spinner
+                loadingSpinner.style.display = "block";
+
+                try {
+                  // Send the user input to the backend via fetch
+                  const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userInput }),
+                  });
+
+                  // Wait for the AI response
+                  const data = await response.json();
+
+                  // Hide spinner after response
+                  loadingSpinner.style.display = "none";
+
+                  // Make sure highlight.js is initialized
+                  hljs.initHighlightingOnLoad();
+
+                  // Configure marked to use highlight.js
+                  marked.setOptions({
+                    highlight: function (code, lang) {
+                      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                      return hljs.highlight(language, code).value;
+                    }
+                  });
+
+                  // Create the AI message
+                  const aiMessage = document.createElement("div");
+                  aiMessage.classList.add("ai-message");
+
+                  // Render the markdown (with syntax highlighted code)
+                  aiMessage.innerHTML = marked(data.response);
+
+                  // Apply syntax highlighting
+                  hljs.highlightAll();
+
+                  // Add "Copy" button to each code block
+                  const codeBlocks = aiMessage.querySelectorAll('pre');
+                  codeBlocks.forEach(block => {
+                    const copyButton = document.createElement('button');
+                    copyButton.classList.add('copy-button');
+                    copyButton.textContent = 'Copy';
+
+                    // Position the button inside the code block
+                    block.style.position = 'relative';
+                    block.appendChild(copyButton);
+
+                    // Add event listener for copying the code to clipboard
+                    copyButton.addEventListener('click', () => {
+                      const code = block.querySelector('code').textContent; // Get the code inside the block
+                      navigator.clipboard.writeText(code).then(() => {
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => {
+                          copyButton.textContent = 'Copy'; // Reset button text after a moment
+                        }, 1500);
+                      });
+                    });
+                  });
+
+                  // Append the message to the chat
+                  chatHistoryArea.appendChild(aiMessage);
+
+                  // Scroll to the bottom after new messages
+                  chatHistoryArea.scrollTop = chatHistoryArea.scrollHeight;
+
+                  // Re-enable input and send button
+                  userInputField.disabled = false;
+                  sendButton.disabled = false;
+
+                } catch (error) {
+                  console.error('Error:', error);
+                  loadingSpinner.style.display = "none";
+                  alert('There was an error while processing your request.');
+                }
+              }
+            }
+
+            // Event listeners for various buttons and actions
+            document.addEventListener("DOMContentLoaded", function () {
+              // Toggle chat history visibility
+              document
+                .getElementById("toggleHistory")
+                .addEventListener("click", toggleSidebar);
+
+              // New Chat button functionality
+              document
+                .getElementById("newChatBtn")
+                .addEventListener("click", function () {
+                  clearChat();
+                  displayWelcomeMessage();
+                });
+
+              // Circle button functionality to reset chat and toggle sidebar
+              document
+                .getElementById("circleBtn")
+                .addEventListener("click", function () {
+                  clearChat();
+                  const chatHistory = document.getElementById("chatHistory");
+                  if (!chatHistory.classList.contains("collapsed")) {
+                    chatHistory.classList.add("collapsed");
+                  }
+                  displayWelcomeMessage();
+                });
+
+              // Send message button functionality
+              document
+                .getElementById("sendBtn")
+                .addEventListener("click", sendMessage);
+
+              // Handle Enter key for sending message and Shift + Enter for new line
+              document
+                .getElementById("userInput")
+                .addEventListener("keydown", function (e) {
+                  if (e.key === "Enter") {
+                    if (!e.shiftKey) {
+                      e.preventDefault(); // Prevent default Enter behavior (line break)
+                      sendMessage();
+                    }
+                  }
+                });
+            });
+          </script>
+
+      </body>
+  </html>
